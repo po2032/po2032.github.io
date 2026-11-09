@@ -1,0 +1,12 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.DefaultCompany.miniGames",
+      "sha256_cert_fingerprints": [
+        "5C:85:BD:98:3A:53:F7:AC:6B:2B:97:42:6E:5E:55:C1:F8:D6:F9:91:7F:19:67:7C:8C:29:93:88:C1:A1:46:C7"
+      ]
+    }
+  }
+]
