@@ -7,7 +7,7 @@
 <meta name="theme-color" content="#14161C">
 <title>miniGames</title>
 <meta property="og:title" content="miniGames">
-<meta property="og:description" content="Entra en la sala con este enlace · Join the room with this link">
+<meta property="og:description" content="Te han invitado a miniGames · You've been invited to miniGames">
 <meta property="og:image" content="https://po2032.github.io/sala/icono.png">
 <link rel="icon" href="icono.png">
 <style>
@@ -63,6 +63,12 @@
     font: 700 44px/1.1 ui-monospace, "Roboto Mono", Menlo, Consolas, monospace;
     letter-spacing: 0.12em;
     color: var(--accent);
+  }
+  /* Los códigos de Besties («Ana_María#4821») son más largos que los de sala. */
+  .code--long {
+    font-size: 30px;
+    letter-spacing: 0.02em;
+    overflow-wrap: anywhere;
   }
   .button {
     display: block;
@@ -135,6 +141,16 @@
       ],
       helpBad: [
         "Pide a quien te ha invitado que vuelva a enviarte el enlace, o el código de la sala para «Entrar con código»."
+      ],
+      bestieTitle: "Añade a {0} como Bestie",
+      bestieTitleBad: "Este enlace no trae ningún código de Besties",
+      bestieLabel: "Su código de Besties",
+      bestieHelp: [
+        "Si no se abre, entra en miniGames, toca «Besties», escribe el código y toca «Añadir».",
+        "¿Aún no tienes miniGames? Pídesela a quien te ha mandado el enlace."
+      ],
+      bestieHelpBad: [
+        "Pide a quien te lo ha mandado que vuelva a enviarte el enlace, o su código para añadirlo en «Besties»."
       ]
     },
     en: {
@@ -151,6 +167,16 @@
       ],
       helpBad: [
         "Ask whoever invited you to send the link again, or the room code for “Join with code”."
+      ],
+      bestieTitle: "Add {0} as a Bestie",
+      bestieTitleBad: "This link doesn't have a Besties code",
+      bestieLabel: "Their Besties code",
+      bestieHelp: [
+        "If it doesn't open, go into miniGames, tap “Besties”, type the code and tap “Add”.",
+        "Don't have miniGames yet? Ask whoever sent you the link."
+      ],
+      bestieHelpBad: [
+        "Ask whoever sent it to you to send the link again, or their code to add them in “Besties”."
       ]
     }
   };
@@ -162,9 +188,21 @@
   var t = texts[language];
   document.documentElement.lang = language;
 
+  // «?c=CODIGO» invita a una sala; «?b=Nombre#1234», a ser Besties. Los dos abren la app con minigames://sala/.
   var params = new URLSearchParams(location.search);
-  var code = (params.get("c") || "").trim().toUpperCase();
-  var valid = /^[A-Z0-9]{6}$/.test(code);
+  var bestie = params.has("b");
+  var code;
+  var valid;
+
+  if (bestie) {
+    // Como BestieCode.TryNormalize en la app: un nombre sin espacios, «#» y números.
+    code = (params.get("b") || "").trim();
+    var hash = code.lastIndexOf("#");
+    valid = hash > 0 && /^\d+$/.test(code.substring(hash + 1)) && !/\s/.test(code);
+  } else {
+    code = (params.get("c") || "").trim().toUpperCase();
+    valid = /^[A-Z0-9]{6}$/.test(code);
+  }
 
   function byId(id) { return document.getElementById(id); }
 
@@ -178,28 +216,41 @@
   }
 
   if (!valid) {
-    byId("title").textContent = t.titleBad;
-    fillHelp(t.helpBad);
+    byId("title").textContent = bestie ? t.bestieTitleBad : t.titleBad;
+    fillHelp(bestie ? t.bestieHelpBad : t.helpBad);
     return;
   }
 
-  byId("title").textContent = t.title;
-  byId("code-label").textContent = t.codeLabel;
+  if (bestie) {
+    // El nombre sin número y con espacios, como BestieCode.DisplayName: «Ana_María#4821» → «Ana María».
+    var name = code.substring(0, code.lastIndexOf("#")).replace(/_/g, " ");
+    byId("title").textContent = t.bestieTitle.replace("{0}", name);
+    byId("code-label").textContent = t.bestieLabel;
+    byId("code").classList.add("code--long");
+    fillHelp(t.bestieHelp);
+  } else {
+    byId("title").textContent = t.title;
+    byId("code-label").textContent = t.codeLabel;
+    fillHelp(t.help);
+  }
+
   byId("code").textContent = code;
   byId("room").hidden = false;
-  fillHelp(t.help);
 
   if (params.get("app") === "0") {
     byId("no-app").textContent = t.noApp;
     byId("no-app").hidden = false;
   }
 
+  // Lo que va detrás de minigames://sala/: el código de la sala, o «?b=» con el de Besties.
+  var target = bestie ? "?b=" + encodeURIComponent(code) : code;
+
   // En Android, Chrome abre la app con un intent; si no está instalada, vuelve a esta página con app=0.
-  var appLink = "minigames://sala/" + code;
+  var appLink = "minigames://sala/" + target;
 
   if (/android/i.test(navigator.userAgent)) {
-    var back = location.origin + location.pathname + "?c=" + code + "&app=0";
-    appLink = "intent://sala/" + code + "#Intent;scheme=minigames;package=" + androidPackage
+    var back = location.origin + location.pathname + (bestie ? target : "?c=" + code) + "&app=0";
+    appLink = "intent://sala/" + target + "#Intent;scheme=minigames;package=" + androidPackage
       + ";S.browser_fallback_url=" + encodeURIComponent(back) + ";end";
   }
 
